@@ -1,0 +1,44 @@
+name: Bug report
+description: 报告可复现的崩溃、错误或兼容性问题
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: 感谢反馈。请勿在日志中包含账号令牌或私人服务器凭据。
+  - type: input
+    id: versions
+    attributes:
+      label: 版本信息
+      description: Minecraft、Fabric Loader、Fabric API、本模组和 Trade Cycling 的版本
+      placeholder: Minecraft 26.1.2; Trade Cycling 1.0.21+26.1.2; ...
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 游戏环境
+      options:
+        - 单人游戏
+        - 多人服务器
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      placeholder: 1. 打开……\n2. 设置……\n3. 按下……
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为与相关日志
+    validations:
+      required: true

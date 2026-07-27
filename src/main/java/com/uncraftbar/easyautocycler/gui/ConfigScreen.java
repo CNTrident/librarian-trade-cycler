@@ -213,6 +213,7 @@ public class ConfigScreen extends Screen {
                 && Objects.equals(left.getEnchantmentId(), right.getEnchantmentId())
                 && left.getEnchantmentLevel() == right.getEnchantmentLevel()
                 && Objects.equals(left.getPaymentItemId(), right.getPaymentItemId())
+                && left.getMinPrice() == right.getMinPrice()
                 && left.getMaxPrice() == right.getMaxPrice();
     }
 

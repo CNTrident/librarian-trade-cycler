@@ -22,6 +22,7 @@ public class FilterEntry {
     
     // Payment criteria
     private Identifier paymentItemId; // null = emeralds (default)
+    private int minPrice = 1;
     private int maxPrice = 64;
 
     public FilterEntry() {
@@ -38,6 +39,7 @@ public class FilterEntry {
         this.enchantmentId = other.enchantmentId;
         this.enchantmentLevel = other.enchantmentLevel;
         this.paymentItemId = other.paymentItemId;
+        this.minPrice = other.minPrice;
         this.maxPrice = other.maxPrice;
     }
 
@@ -94,6 +96,14 @@ public class FilterEntry {
         return maxPrice;
     }
 
+    public int getMinPrice() {
+        return minPrice;
+    }
+
+    public void setMinPrice(int minPrice) {
+        this.minPrice = minPrice;
+    }
+
     public void setMaxPrice(int maxPrice) {
         this.maxPrice = maxPrice;
     }
@@ -128,7 +138,7 @@ public class FilterEntry {
         if (itemId != null && minCount > 1) {
             component.append(Component.literal("  ×" + minCount).withStyle(ChatFormatting.GRAY));
         }
-        component.append(Component.literal("  •  ≤" + maxPrice + " ").withStyle(ChatFormatting.DARK_GRAY));
+        component.append(Component.literal("  •  " + minPrice + "-" + maxPrice + " ").withStyle(ChatFormatting.DARK_GRAY));
         component.append(Component.literal(paymentItemId == null ? "emeralds" : paymentItemId.getPath())
                 .withStyle(ChatFormatting.GREEN));
 

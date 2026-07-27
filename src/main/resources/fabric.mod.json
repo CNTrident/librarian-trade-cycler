@@ -1,14 +1,19 @@
 {
   "schemaVersion": 1,
-  "id": "easyautocycler",
+  "id": "librarian_trade_cycler",
   "version": "${version}",
-  "name": "Easy Auto Cycler",
-  "description": "A client-side mod that adds advanced filtering and automation to trade cycling.",
+  "name": "Librarian Trade Cycler",
+  "description": "Automatically cycles unlocked librarian trades until an exact enchanted-book and original-price target is found.",
   "authors": [
-    "Uncraftbar"
+    "CNTrident"
+  ],
+  "contributors": [
+    "Uncraftbar (Easy Auto Cycler base)"
   ],
   "contact": {
-    "sources": "https://github.com/Uncraftbar/Easy-Auto-Cycler"
+    "homepage": "https://github.com/CNTrident/librarian-trade-cycler",
+    "sources": "https://github.com/CNTrident/librarian-trade-cycler",
+    "issues": "https://github.com/CNTrident/librarian-trade-cycler/issues"
   },
   "license": "MIT",
   "environment": "client",
@@ -28,9 +33,10 @@
     "fabric-key-mapping-api-v1": "*",
     "fabric-networking-api-v1": "*",
     "fabric-resource-loader-v0": "*",
-    "fabric-screen-api-v1": "*"
+    "fabric-screen-api-v1": "*",
+    "trade_cycling": ">=1.0.21"
   },
-  "suggests": {
-    "trade_cycling": "*"
+  "breaks": {
+    "easyautocycler": "*"
   }
 }

@@ -36,6 +36,7 @@ public class FilterConfig {
         public String enchantmentId;
         public int enchantmentLevel = 1;
         public String paymentItemId;
+        public int minPrice = 1;
         public int maxPrice = 64;
     }
     
@@ -55,6 +56,7 @@ public class FilterConfig {
                 data.enchantmentId = filter.getEnchantmentId() != null ? filter.getEnchantmentId().toString() : null;
                 data.enchantmentLevel = filter.getEnchantmentLevel();
                 data.paymentItemId = filter.getPaymentItemId() != null ? filter.getPaymentItemId().toString() : null;
+                data.minPrice = filter.getMinPrice();
                 data.maxPrice = filter.getMaxPrice();
                 config.filters.add(data);
             }
@@ -111,6 +113,7 @@ public class FilterConfig {
             filter.setEnabled(data.enabled);
             filter.setMinCount(data.minCount);
             filter.setEnchantmentLevel(data.enchantmentLevel);
+            filter.setMinPrice(Math.max(1, data.minPrice));
             filter.setMaxPrice(data.maxPrice);
             
             if (data.itemId != null && !data.itemId.isEmpty()) {

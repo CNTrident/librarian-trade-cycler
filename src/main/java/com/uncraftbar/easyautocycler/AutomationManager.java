@@ -238,7 +238,14 @@ public class AutomationManager {
 
         migrateOldConfigToFilters();
         if (filterEntries.isEmpty()) {
-            this.sendMessageToPlayer(Component.literal("Warning: No filters configured. Cycling will not stop automatically."));
+            this.sendMessageToPlayer(Component.translatable("chat.easyautocycler.error.noconfig").withStyle(ChatFormatting.RED));
+            return;
+        }
+
+        MerchantScreen merchantScreen = (MerchantScreen) currentScreen;
+        if (!canCycleTrades(merchantScreen.getMenu())) {
+            this.sendMessageToPlayer(Component.translatable("chat.easyautocycler.error.locked").withStyle(ChatFormatting.RED));
+            return;
         }
 
         if (isRunning.compareAndSet(false, true)) {
@@ -248,7 +255,7 @@ public class AutomationManager {
             this.waitingForOfferTicks = 0;
             this.currentCycles = 0;
             this.lastMatchedFilter = null;
-            evaluateAndMaybeCycle((MerchantScreen) currentScreen);
+            evaluateAndMaybeCycle(merchantScreen);
         }
     }
 
@@ -372,7 +379,7 @@ public class AutomationManager {
         for (MerchantOffer offer : offers) {
             if (offer.isOutOfStock()) continue;
 
-            ItemStack costA = offer.getCostA();
+            ItemStack costA = offer.getBaseCostA();
             ItemStack costB = offer.getCostB();
             if (!((costA.is(Items.EMERALD) && costA.getCount() <= this.maxEmeraldCost)
                     || (costB.is(Items.EMERALD) && costB.getCount() <= this.maxEmeraldCost))) {
@@ -395,7 +402,7 @@ public class AutomationManager {
 
             if (offer.isOutOfStock()) continue;
 
-            ItemStack costA = offer.getCostA();
+            ItemStack costA = offer.getBaseCostA();
             ItemStack costB = offer.getCostB();
             if (!((costA.is(Items.EMERALD) && costA.getCount() <= this.maxEmeraldCost)
                     || (costB.is(Items.EMERALD) && costB.getCount() <= this.maxEmeraldCost))) {
@@ -460,18 +467,26 @@ public class AutomationManager {
             if (offer.isOutOfStock()) continue;
 
             ItemStack resultStack = offer.getResult();
-            ItemStack costA = offer.getCostA();
+            // Cost A is the only cost affected by demand, reputation and special-price
+            // adjustments. The base cost intentionally ignores discounts and increases.
+            ItemStack costA = offer.getBaseCostA();
             ItemStack costB = offer.getCostB();
 
             boolean priceMatches;
             if (filter.getPaymentItemId() == null) {
-                priceMatches = (costA.is(Items.EMERALD) && costA.getCount() <= filter.getMaxPrice())
-                        || (costB.is(Items.EMERALD) && costB.getCount() <= filter.getMaxPrice());
+                priceMatches = (costA.is(Items.EMERALD)
+                        && costA.getCount() >= filter.getMinPrice()
+                        && costA.getCount() <= filter.getMaxPrice())
+                        || (costB.is(Items.EMERALD)
+                        && costB.getCount() >= filter.getMinPrice()
+                        && costB.getCount() <= filter.getMaxPrice());
             } else {
                 Item paymentItem = BuiltInRegistries.ITEM.getOptional(filter.getPaymentItemId()).orElse(null);
                 priceMatches = paymentItem != null && (
-                        (costA.is(paymentItem) && costA.getCount() <= filter.getMaxPrice())
-                                || (costB.is(paymentItem) && costB.getCount() <= filter.getMaxPrice()));
+                        (costA.is(paymentItem) && costA.getCount() >= filter.getMinPrice()
+                                && costA.getCount() <= filter.getMaxPrice())
+                                || (costB.is(paymentItem) && costB.getCount() >= filter.getMinPrice()
+                                && costB.getCount() <= filter.getMaxPrice()));
             }
 
             if (!priceMatches) continue;
@@ -483,7 +498,8 @@ public class AutomationManager {
             }
 
             if (filter.getEnchantmentId() != null) {
-                if (!matchesEnchantmentOnStack(resultStack, filter.getEnchantmentId(), filter.getEnchantmentLevel(), false)) {
+                if (!resultStack.is(Items.ENCHANTED_BOOK)
+                        || !matchesEnchantmentOnStack(resultStack, filter.getEnchantmentId(), filter.getEnchantmentLevel(), true)) {
                     continue;
                 }
             }
