@@ -1,6 +1,7 @@
 package com.uncraftbar.easyautocycler;
 
 import com.uncraftbar.easyautocycler.config.FilterConfig;
+import com.uncraftbar.easyautocycler.compat.VisibleTradersCompat;
 import com.uncraftbar.easyautocycler.filter.FilterEntry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
@@ -44,9 +45,14 @@ public class AutomationManager {
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private boolean waitingForOfferUpdate = false;
     private int waitingForOfferTicks = 0;
+    private boolean waitingForVisibleTrades = false;
+    private int waitingForVisibleTradesTicks = 0;
     private int currentCycles = 0;
     private static final int MAX_CYCLES_SAFETY = 3000;
     private static final int OFFER_UPDATE_TIMEOUT_TICKS = 100;
+    private static final int VISIBLE_TRADERS_TIMEOUT_TICKS = 200;
+
+    private final VisibleTradersCompat visibleTradersCompat = new VisibleTradersCompat();
 
     private static boolean initialized = false;
     private static boolean tradeCyclingLoaded = false;
@@ -253,6 +259,8 @@ public class AutomationManager {
             this.sendMessageToPlayer(Component.literal("Auto-cycling started. Press button again to stop."));
             this.waitingForOfferUpdate = false;
             this.waitingForOfferTicks = 0;
+            this.waitingForVisibleTrades = false;
+            this.waitingForVisibleTradesTicks = 0;
             this.currentCycles = 0;
             this.lastMatchedFilter = null;
             evaluateAndMaybeCycle(merchantScreen);
@@ -263,6 +271,8 @@ public class AutomationManager {
         if (isRunning.compareAndSet(true, false)) {
             waitingForOfferUpdate = false;
             waitingForOfferTicks = 0;
+            waitingForVisibleTrades = false;
+            waitingForVisibleTradesTicks = 0;
             EasyAutoCyclerMod.LOGGER.debug("Stopping villager trade cycling. Reason: {}", reason);
         }
     }
@@ -285,6 +295,26 @@ public class AutomationManager {
             return;
         }
 
+        if (waitingForVisibleTrades) {
+            waitingForVisibleTradesTicks++;
+            VisibleTradersCompat.OfferView offerView = visibleTradersCompat.getOffers(screen.getMenu());
+            if (!offerView.previewReady()) {
+                if (waitingForVisibleTradesTicks >= VISIBLE_TRADERS_TIMEOUT_TICKS) {
+                    this.sendMessageToPlayer(Component.translatable(
+                            "chat.easyautocycler.error.visibletraders_timeout",
+                            visibleTradersCompat.getVersion()).withStyle(ChatFormatting.RED));
+                    EasyAutoCyclerMod.LOGGER.warn(
+                            "VisibleTraders {} did not provide future trades after {} ticks",
+                            visibleTradersCompat.getVersion(), VISIBLE_TRADERS_TIMEOUT_TICKS);
+                    stop("VisibleTraders preview timed out");
+                }
+                return;
+            }
+
+            waitingForVisibleTrades = false;
+            waitingForVisibleTradesTicks = 0;
+        }
+
         evaluateAndMaybeCycle(screen);
     }
 
@@ -305,28 +335,51 @@ public class AutomationManager {
     private void evaluateAndMaybeCycle(MerchantScreen screen) {
         if (!isRunning.get() || waitingForOfferUpdate) return;
 
-        MerchantOffers offers = screen.getMenu().getOffers();
+        VisibleTradersCompat.OfferView offerView = visibleTradersCompat.getOffers(screen.getMenu());
+        if (offerView.visibleTradersLoaded() && !visibleTradersCompat.isIntegrationAvailable(screen.getMenu())) {
+            this.sendMessageToPlayer(Component.translatable(
+                    "chat.easyautocycler.error.visibletraders_version",
+                    visibleTradersCompat.getVersion()).withStyle(ChatFormatting.RED));
+            stop("Unsupported VisibleTraders version");
+            return;
+        }
+        if (offerView.visibleTradersLoaded() && !offerView.previewReady()) {
+            waitingForVisibleTrades = true;
+            waitingForVisibleTradesTicks = 0;
+            return;
+        }
+
+        MerchantOffers offers = offerView.offers();
 
         List<FilterEntry> enabledFilters = filterEntries.stream()
                 .filter(FilterEntry::isEnabled)
                 .collect(Collectors.toList());
 
         if (!enabledFilters.isEmpty() && checkTradesWithFilters(offers)) {
-            Component message = Component.empty()
-                    .append(Component.literal("§aTarget trade found: "))
-                    .append(this.lastMatchedFilter.getDisplayName());
+            Component message;
+            if (matchAny) {
+                message = Component.translatable(
+                        "chat.easyautocycler.found_with_count",
+                        currentCycles,
+                        this.lastMatchedFilter.getDisplayName());
+            } else {
+                message = Component.translatable(
+                        "chat.easyautocycler.found_all_with_count",
+                        currentCycles,
+                        enabledFilters.size());
+            }
             this.sendMessageToPlayer(message);
             playSuccessSound();
             stop("Target trade found with filter");
             return;
         } else if (enabledFilters.isEmpty()) {
             if (cycleMode == MODE_ENCHANTMENT && targetEnchantmentId != null && checkTradesForEnchantment(offers)) {
-                this.sendMessageToPlayer(Component.literal("§aTarget trade found!"));
+                this.sendMessageToPlayer(Component.translatable("chat.easyautocycler.found_legacy_with_count", currentCycles));
                 playSuccessSound();
                 stop("Target trade found");
                 return;
             } else if (cycleMode == MODE_ITEM && targetItemId != null && checkTradesForItem(offers)) {
-                this.sendMessageToPlayer(Component.literal("§aTarget item trade found!"));
+                this.sendMessageToPlayer(Component.translatable("chat.easyautocycler.item_found_with_count", currentCycles));
                 playSuccessSound();
                 stop("Target item trade found");
                 return;

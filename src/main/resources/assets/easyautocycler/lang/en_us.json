@@ -79,5 +79,11 @@
   "gui.easyautocycler.filter.error.invalid_payment_item": "Unknown payment item ID: '%s'",
   "gui.easyautocycler.filter.error.invalid_price": "Invalid price (1-64): %s",
   "gui.easyautocycler.filter.error.price_range": "Minimum price cannot exceed maximum price.",
-  "gui.easyautocycler.filter.error.no_criteria": "Error: Set at least one of: Enchantment ID or Item ID"
+  "gui.easyautocycler.filter.error.no_criteria": "Error: Set at least one of: Enchantment ID or Item ID",
+  "chat.easyautocycler.found_with_count": "§aTarget found after %s refreshes: %s",
+  "chat.easyautocycler.found_all_with_count": "§aTarget found after %s refreshes: all %s target trades are present.",
+  "chat.easyautocycler.found_legacy_with_count": "§aTarget trade found after %s refreshes.",
+  "chat.easyautocycler.item_found_with_count": "§aTarget item trade found after %s refreshes.",
+  "chat.easyautocycler.error.visibletraders_version": "VisibleTraders %s was detected, but its compatibility API is unavailable. Update it to 2.3.0 or newer on both client and server.",
+  "chat.easyautocycler.error.visibletraders_timeout": "Timed out waiting for VisibleTraders %s future trades. Make sure version 2.3.0 or newer is installed on both client and server."
 }
