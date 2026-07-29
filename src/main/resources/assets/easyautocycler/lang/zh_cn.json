@@ -30,10 +30,9 @@
   "gui.easyautocycler.filter.error.price_range": "最低价格不能高于最高价格。",
   "chat.easyautocycler.error.noconfig": "请先设置至少一个附魔书目标。",
   "chat.easyautocycler.error.locked": "该村民无法刷新：交易可能已锁定，或服务器未安装 Trade Cycling。",
-  "chat.easyautocycler.found_with_count": "§a筛选成功！共刷新 %s 次：%s",
-  "chat.easyautocycler.found_all_with_count": "§a筛选成功！共刷新 %s 次，已找到全部 %s 个目标交易。",
-  "chat.easyautocycler.found_legacy_with_count": "§a筛选成功！共刷新 %s 次。",
-  "chat.easyautocycler.item_found_with_count": "§a物品交易筛选成功！共刷新 %s 次。",
-  "chat.easyautocycler.error.visibletraders_version": "检测到 VisibleTraders %s，但兼容接口不可用；请将客户端和服务端更新到 2.3.0 或更高版本。",
-  "chat.easyautocycler.error.visibletraders_timeout": "等待 VisibleTraders %s 同步后续交易超时；请确认客户端和服务端均安装了 2.3.0 或更高版本。"
+  "chat.easyautocycler.found_with_count": "§a刷新 %s 次后找到目标：%s",
+  "chat.easyautocycler.found_all_with_count": "§a刷新 %s 次后找到全部 %s 个目标。",
+  "chat.easyautocycler.found_legacy_with_count": "§a刷新 %s 次后找到目标交易。",
+  "chat.easyautocycler.item_found_with_count": "§a刷新 %s 次后找到目标物品交易。",
+  "chat.easyautocycler.max_cycles_reached": "§c已达到 %s 次刷新安全上限，自动刷新已停止。"
 }

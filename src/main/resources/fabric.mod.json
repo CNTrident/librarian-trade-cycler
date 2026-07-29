@@ -36,9 +36,6 @@
     "fabric-screen-api-v1": "*",
     "trade_cycling": ">=1.0.21"
   },
-  "suggests": {
-    "visibletraders": ">=2.3.0"
-  },
   "breaks": {
     "easyautocycler": "*"
   }

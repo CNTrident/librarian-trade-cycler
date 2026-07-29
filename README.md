@@ -8,34 +8,27 @@
 面向 Minecraft Java Edition 26.1.2 + Fabric 的客户端便捷模组。它与
 [Trade Cycling 1.0.21+26.1.2](https://www.curseforge.com/minecraft/mc-mods/trade-cycling/files/8020648)
 配合，在未锁定的村民交易界面中自动刷新交易，直到出现满足条件的附魔书。
-配合 [Visible Traders 2.3.0+](https://modrinth.com/mod/visible-traders) 时，还会把村民后续等级的预览交易
-纳入同一轮筛选，因此“全部满足（AND）”可用于寻找同时拥有多本指定附魔书的村民。
 
 ## 功能
 
 - 可保存多个附魔书目标，并以“任一满足（OR）”或“全部满足（AND）”决定停止条件。
-- 找到目标后在聊天栏显示本轮刷新次数；每次重新启动筛选时从 0 开始计数。
-- 可选适配 Visible Traders 2.3.0+，筛选当前交易和所有后续等级的预览交易。
+- 找到目标并停止时在聊天栏显示本轮刷新次数；每次重新开始时从 0 计数。
 - 每个目标可设置附魔 ID、精确等级、最低和最高原始绿宝石价格。
 - 价格使用 `MerchantOffer#getBaseCostA()`，不计入治愈/声望/村庄英雄折扣，也不计入需求涨价。
 - 每次刷新都等待服务端返回新交易后再继续，不会每 tick 连续发送刷新包。
-- 交易已锁定、服务端不支持、没有目标、网络响应超时或达到 3000 次安全上限时自动停止。
+- 交易已锁定、服务端不支持、没有目标、网络响应超时或达到 100000 次安全上限时自动停止。
 - 内置简体中文和英文界面。
 
 ## 安装
 
 客户端 `mods` 目录放入：
 
-1. `librarian_trade_cycler-fabric-26.1.2-1.1.0.jar`
+1. `librarian_trade_cycler-fabric-26.1.2-1.0.0.jar`
 2. `trade-cycling-fabric-1.0.21+26.1.2.jar`
 3. 与 Minecraft 26.1.2 匹配的 Fabric API
 
 多人游戏中，服务器也必须安装 Trade Cycling；本模组自身只需安装在客户端。
 Minecraft 26.1.2 和本项目的构建环境要求 Java 25。
-
-若要筛选同一村民所有等级的多本附魔书，还需在客户端和服务端安装
-[Visible Traders 2.4.0（Minecraft 26.1.2）](https://modrinth.com/mod/visible-traders/version/2.4.0)。
-最低兼容版本为 2.3.0；不建议使用 2.0.0–2.2.0，因为这些版本在 Trade Cycling 刷新后的预览同步存在问题。
 
 ## 使用
 
@@ -74,9 +67,6 @@ Minecraft 26.1.2 和本项目的构建环境要求 Java 25。
 - **运行依赖：** 使用
   [henkelmax/trade-cycling](https://github.com/henkelmax/trade-cycling)
   提供的未锁定村民交易刷新协议。Trade Cycling 不会被打包进本项目 JAR，玩家需要单独安装它。
-- **可选兼容：** 对接 MIT 许可的
-  [Ramixin/VisibleTraders](https://github.com/Ramixin/VisibleTraders)，通过其客户端 combined-offers 接口读取锁定的后续等级交易。
-  Visible Traders 不会被打包进本项目 JAR，兼容层也未复制其源代码。
 
 本项目自身以 [MIT License](LICENSE) 发布。提交问题请使用
 [GitHub Issues](https://github.com/CNTrident/librarian-trade-cycler/issues)，参与开发前请阅读
