@@ -60,7 +60,7 @@ public class SuggestingEditBox extends EditBox {
 
     private static boolean matches(String id, String query, boolean namespaced) {
         String lowerId = id.toLowerCase(Locale.ROOT);
-        return namespaced ? lowerId.startsWith(query)
+        return namespaced ? lowerId.startsWith(query) || lowerId.contains("(" + query)
                 : path(lowerId).startsWith(query) || lowerId.startsWith(query);
     }
 
@@ -94,7 +94,8 @@ public class SuggestingEditBox extends EditBox {
     private void updateInlineSuggestion() {
         String query = getValue().trim();
         String selected = matches.get(selectedSuggestion);
-        String comparison = query.indexOf(':') >= 0 ? selected : path(selected);
+        String comparison = selected.regionMatches(true, 0, query, 0, query.length())
+                ? selected : path(selected);
         setSuggestion(comparison.regionMatches(true, 0, query, 0, query.length())
                 ? comparison.substring(query.length()) : null);
     }

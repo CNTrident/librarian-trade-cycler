@@ -58,8 +58,8 @@
   
   "gui.easyautocycler.filter.title": "Edit Filter",
   "gui.easyautocycler.filter.subtitle": "Exact book level; price uses the original value before discounts or increases.",
-  "gui.easyautocycler.filter.enchantment_id": "Enchantment ID (optional)",
-  "gui.easyautocycler.filter.enchantment_id_short": "Enchantment ID",
+  "gui.easyautocycler.filter.enchantment_id": "Enchantment Name (Chinese/English)",
+  "gui.easyautocycler.filter.enchantment_id_short": "Enchantment Name (Chinese/English)",
   "gui.easyautocycler.filter.enchantment_level": "Exact Enchantment Level",
   "gui.easyautocycler.filter.item_id": "Item ID (optional)",
   "gui.easyautocycler.filter.item_id_short": "Item ID",
@@ -72,7 +72,7 @@
   "gui.easyautocycler.filter.save": "Save",
   "gui.easyautocycler.filter.cancel": "Cancel",
   "gui.easyautocycler.filter.help": "Set at least one of: Enchantment ID or Item ID",
-  "gui.easyautocycler.filter.error.invalid_enchantment_id": "Unknown enchantment ID: '%s'",
+  "gui.easyautocycler.filter.error.invalid_enchantment_id": "Unknown or ambiguous enchantment name/ID: '%s'. Select a suggestion or enter the full ID.",
   "gui.easyautocycler.filter.error.invalid_level": "Invalid level: %s",
   "gui.easyautocycler.filter.error.invalid_item_id": "Unknown item ID: '%s'",
   "gui.easyautocycler.filter.error.invalid_count": "Invalid count: %s",
@@ -84,5 +84,6 @@
   "chat.easyautocycler.found_all_with_count": "§aTarget found after %s refreshes: all %s target trades are present.",
   "chat.easyautocycler.found_legacy_with_count": "§aTarget trade found after %s refreshes.",
   "chat.easyautocycler.item_found_with_count": "§aTarget item trade found after %s refreshes.",
-  "chat.easyautocycler.max_cycles_reached": "§cReached the safety limit of %s refreshes; auto-cycling stopped."
+  "chat.easyautocycler.max_cycles_reached": "§cReached the safety limit of %s refreshes; auto-cycling stopped.",
+  "chat.easyautocycler.stopped_with_count": "§eStopped manually after %s refreshes this run."
 }

@@ -43,6 +43,7 @@ public class AutomationManager {
 
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private boolean waitingForOfferUpdate = false;
+    private boolean offerUpdateReadyForEvaluation = false;
     private int waitingForOfferTicks = 0;
     private int currentCycles = 0;
     private static final int MAX_CYCLES_SAFETY = 100_000;
@@ -75,9 +76,9 @@ public class AutomationManager {
         public boolean sendCyclePacket() {
             try {
                 Object packet = packetConstructor.newInstance();
-                if (Minecraft.getInstance().getConnection() != null) {
-                    Minecraft.getInstance().getConnection().send(new ServerboundCustomPayloadPacket((CustomPacketPayload) packet));
-                }
+                if (Minecraft.getInstance().getConnection() == null) return false;
+                Minecraft.getInstance().getConnection().send(
+                        new ServerboundCustomPayloadPacket((CustomPacketPayload) packet));
                 EasyAutoCyclerMod.LOGGER.trace("Sent Trade Cycling cycle packet");
                 return true;
             } catch (Exception e) {
@@ -217,7 +218,10 @@ public class AutomationManager {
 
     public void toggle() {
         if (isRunning.get()) {
-            stop("Toggled off by user");
+            if (stopInternal("Toggled off by user")) {
+                this.sendMessageToPlayer(Component.translatable(
+                        "chat.easyautocycler.stopped_with_count", currentCycles));
+            }
         } else {
             start();
         }
@@ -252,6 +256,7 @@ public class AutomationManager {
             EasyAutoCyclerMod.LOGGER.debug("Starting network-synchronized villager trade cycling.");
             this.sendMessageToPlayer(Component.literal("Auto-cycling started. Press button again to stop."));
             this.waitingForOfferUpdate = false;
+            this.offerUpdateReadyForEvaluation = false;
             this.waitingForOfferTicks = 0;
             this.currentCycles = 0;
             this.lastMatchedFilter = null;
@@ -260,11 +265,18 @@ public class AutomationManager {
     }
 
     public void stop(String reason) {
+        stopInternal(reason);
+    }
+
+    private boolean stopInternal(String reason) {
         if (isRunning.compareAndSet(true, false)) {
             waitingForOfferUpdate = false;
+            offerUpdateReadyForEvaluation = false;
             waitingForOfferTicks = 0;
             EasyAutoCyclerMod.LOGGER.debug("Stopping villager trade cycling. Reason: {}", reason);
+            return true;
         }
+        return false;
     }
 
     public void clientTick() {
@@ -285,6 +297,8 @@ public class AutomationManager {
             return;
         }
 
+        if (!offerUpdateReadyForEvaluation) return;
+        offerUpdateReadyForEvaluation = false;
         evaluateAndMaybeCycle(screen);
     }
 
@@ -299,7 +313,10 @@ public class AutomationManager {
 
         waitingForOfferUpdate = false;
         waitingForOfferTicks = 0;
-        evaluateAndMaybeCycle(screen);
+        // Do not send the next cycle from inside the packet handler. The next client
+        // tick evaluates the offers that this packet has just applied, and only an
+        // unsuccessful evaluation is allowed to issue another refresh request.
+        offerUpdateReadyForEvaluation = true;
     }
 
     private void evaluateAndMaybeCycle(MerchantScreen screen) {

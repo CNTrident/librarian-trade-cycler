@@ -95,7 +95,8 @@ public class ClientEventHandler {
         private void refreshCycleAvailability() {
             // Keep visible=true: Minecraft stops invoking the inner render hook for invisible widgets,
             // which would permanently prevent a temporarily unavailable button from recovering.
-            this.cycleAvailable = AutomationManager.INSTANCE.canCycleTrades(this.merchantScreen.getMenu());
+            this.cycleAvailable = AutomationManager.INSTANCE.isRunning()
+                    || AutomationManager.INSTANCE.canCycleTrades(this.merchantScreen.getMenu());
             this.active = this.cycleAvailable;
         }
 

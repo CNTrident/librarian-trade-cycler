@@ -31,6 +31,7 @@ public class ConfigScreen extends Screen {
 
     private FilterListWidget filterListWidget;
     private List<String> enchantmentSuggestions = List.of();
+    private EnchantmentNameResolver enchantmentNameResolver;
     private List<String> itemSuggestions = List.of();
 
     private List<FilterEntry> filters = new ArrayList<>();
@@ -71,12 +72,10 @@ public class ConfigScreen extends Screen {
         }
 
         try {
-            this.enchantmentSuggestions = this.minecraft.level.registryAccess()
-                    .lookupOrThrow(Registries.ENCHANTMENT)
-                    .listElementIds()
-                    .map(k -> k.identifier().toString())
-                    .sorted()
-                    .collect(Collectors.toList());
+            this.enchantmentNameResolver = new EnchantmentNameResolver(
+                    this.minecraft.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT),
+                    this.minecraft.getResourceManager());
+            this.enchantmentSuggestions = this.enchantmentNameResolver.suggestions();
 
             this.itemSuggestions = BuiltInRegistries.ITEM.keySet().stream()
                     .map(Identifier::toString)
@@ -225,7 +224,8 @@ public class ConfigScreen extends Screen {
     private void openFilterEditor(@Nullable FilterEntry filterToEdit) {
         if (filterToEdit == null) {
             FilterEntry newFilter = new FilterEntry();
-            FilterEditorScreen editorScreen = new FilterEditorScreen(this, newFilter, enchantmentSuggestions, itemSuggestions, index -> {
+            FilterEditorScreen editorScreen = new FilterEditorScreen(this, newFilter,
+                    enchantmentNameResolver, enchantmentSuggestions, itemSuggestions, index -> {
                 filters.add(newFilter);
                 refreshFiltersList();
             });
@@ -234,7 +234,8 @@ public class ConfigScreen extends Screen {
             int filterIndex = filters.indexOf(filterToEdit);
             if (filterIndex >= 0) {
                 FilterEntry filterCopy = new FilterEntry(filterToEdit);
-                FilterEditorScreen editorScreen = new FilterEditorScreen(this, filterCopy, enchantmentSuggestions, itemSuggestions, index -> {
+                FilterEditorScreen editorScreen = new FilterEditorScreen(this, filterCopy,
+                        enchantmentNameResolver, enchantmentSuggestions, itemSuggestions, index -> {
                     filters.set(filterIndex, filterCopy);
                     refreshFiltersList();
                 });

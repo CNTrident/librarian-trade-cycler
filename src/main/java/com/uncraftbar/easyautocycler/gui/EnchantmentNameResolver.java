@@ -1,0 +1,133 @@
+package com.uncraftbar.easyautocycler.gui;
+
+import net.minecraft.core.Registry;
+import net.minecraft.client.resources.language.ClientLanguage;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.world.item.enchantment.Enchantment;
+import org.jspecify.annotations.Nullable;
+
+import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
+/** Resolves stable enchantment IDs from localized, English, or namespaced input. */
+public final class EnchantmentNameResolver {
+
+    private final Registry<Enchantment> registry;
+    private final Map<String, Identifier> aliases = new HashMap<>();
+    private final Set<String> ambiguousAliases = new HashSet<>();
+    private final Map<Identifier, String> preferredNames = new HashMap<>();
+    private final List<String> suggestions;
+
+    public EnchantmentNameResolver(Registry<Enchantment> registry, ResourceManager resourceManager) {
+        this.registry = registry;
+        Set<String> suggestionSet = new LinkedHashSet<>();
+        ClientLanguage english = ClientLanguage.loadFrom(resourceManager, List.of("en_us"), false);
+        ClientLanguage chinese = ClientLanguage.loadFrom(resourceManager, List.of("zh_cn"), false);
+
+        for (Identifier id : registry.keySet()) {
+            Enchantment enchantment = registry.getValue(id);
+            Component description = enchantment == null ? Component.empty() : enchantment.description();
+            String localizedName = description.getString().trim();
+            String englishName = humanizePath(id.getPath());
+            String chineseName = "";
+
+            if (description.getContents() instanceof TranslatableContents translatable) {
+                String key = translatable.getKey();
+                if (english.has(key)) englishName = english.getOrDefault(key, englishName).trim();
+                if (chinese.has(key)) chineseName = chinese.getOrDefault(key, "").trim();
+            }
+
+            registerAlias(id.toString(), id);
+            registerAlias(id.getPath(), id);
+            registerAlias(englishName, id);
+            registerAlias(chineseName, id);
+            registerAlias(localizedName, id);
+
+            String preferredName = localizedName.isEmpty() ? englishName : localizedName;
+            preferredNames.put(id, preferredName);
+            addNamedSuggestion(suggestionSet, localizedName, id);
+            addNamedSuggestion(suggestionSet, chineseName, id);
+            addNamedSuggestion(suggestionSet, englishName, id);
+            suggestionSet.add(id.toString());
+        }
+
+        this.suggestions = suggestionSet.stream()
+                .sorted(Comparator.comparing(value -> value.toLowerCase(Locale.ROOT)))
+                .toList();
+    }
+
+    @Nullable
+    public Identifier resolve(String input) {
+        String trimmed = input == null ? "" : input.trim();
+        if (trimmed.isEmpty()) return null;
+
+        try {
+            Identifier id = Identifier.parse(trimmed);
+            if (registry.containsKey(id)) return id;
+        } catch (RuntimeException ignored) {
+            // A localized or English display name is resolved through aliases below.
+        }
+
+        String normalized = normalize(trimmed);
+        return ambiguousAliases.contains(normalized) ? null : aliases.get(normalized);
+    }
+
+    public String preferredInput(Identifier id) {
+        return preferredNames.getOrDefault(id, humanizePath(id.getPath()));
+    }
+
+    public List<String> suggestions() {
+        return new ArrayList<>(suggestions);
+    }
+
+    private void registerAlias(String alias, Identifier id) {
+        String normalized = normalize(alias);
+        if (normalized.isEmpty() || ambiguousAliases.contains(normalized)) return;
+
+        Identifier previous = aliases.putIfAbsent(normalized, id);
+        if (previous != null && !previous.equals(id)) {
+            aliases.remove(normalized);
+            ambiguousAliases.add(normalized);
+        }
+    }
+
+    private void addNamedSuggestion(Set<String> suggestions, String name, Identifier id) {
+        if (name.isEmpty()) return;
+        String suggestion = name + " (" + id + ")";
+        suggestions.add(suggestion);
+        registerAlias(suggestion, id);
+    }
+
+    private static String humanizePath(String path) {
+        String[] words = path.split("_");
+        StringBuilder result = new StringBuilder();
+        for (String word : words) {
+            if (word.isEmpty()) continue;
+            if (!result.isEmpty()) result.append(' ');
+            result.append(Character.toUpperCase(word.charAt(0)));
+            if (word.length() > 1) result.append(word.substring(1));
+        }
+        return result.toString();
+    }
+
+    private static String normalize(String value) {
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFKC)
+                .toLowerCase(Locale.ROOT);
+        StringBuilder result = new StringBuilder();
+        normalized.codePoints()
+                .filter(Character::isLetterOrDigit)
+                .forEach(result::appendCodePoint);
+        return result.toString();
+    }
+}

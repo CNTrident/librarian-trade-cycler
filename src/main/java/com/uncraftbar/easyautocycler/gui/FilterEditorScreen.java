@@ -8,10 +8,8 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
@@ -23,6 +21,7 @@ public class FilterEditorScreen extends Screen {
     @Nullable private final Screen previousScreen;
     private final FilterEntry filter;
     private final Consumer<Integer> onSave;
+    private final EnchantmentNameResolver enchantmentNameResolver;
     private final List<String> enchantmentSuggestions;
 
     private SuggestingEditBox enchantmentIdInput;
@@ -41,12 +40,14 @@ public class FilterEditorScreen extends Screen {
     private static final int EDITOR_HEIGHT = 170;
 
     public FilterEditorScreen(@Nullable Screen previousScreen, FilterEntry filter,
+                              EnchantmentNameResolver enchantmentNameResolver,
                               List<String> enchantmentSuggestions, List<String> ignoredItemSuggestions,
                               Consumer<Integer> onSave) {
         super(Component.translatable("gui.easyautocycler.filter.title"));
         this.previousScreen = previousScreen;
         this.filter = filter;
         this.onSave = onSave;
+        this.enchantmentNameResolver = enchantmentNameResolver;
         this.enchantmentSuggestions = enchantmentSuggestions;
     }
 
@@ -63,7 +64,9 @@ public class FilterEditorScreen extends Screen {
         enchantmentIdInput = new SuggestingEditBox(this.font, left, firstY, columnWidth, INPUT_HEIGHT,
                 Component.translatable("gui.easyautocycler.filter.enchantment_id"), enchantmentSuggestions);
         enchantmentIdInput.setMaxLength(256);
-        if (filter.getEnchantmentId() != null) enchantmentIdInput.setValue(filter.getEnchantmentId().toString());
+        if (filter.getEnchantmentId() != null) {
+            enchantmentIdInput.setValue(enchantmentNameResolver.preferredInput(filter.getEnchantmentId()));
+        }
         this.addRenderableWidget(enchantmentIdInput);
 
         enchantmentLevelInput = new EditBox(this.font, left + columnWidth + gap, firstY, columnWidth, INPUT_HEIGHT,
@@ -96,13 +99,8 @@ public class FilterEditorScreen extends Screen {
 
     private void saveFilter() {
         String idText = enchantmentIdInput.getValue().trim();
-        Identifier id;
-        try {
-            id = Identifier.parse(idText);
-            boolean exists = Minecraft.getInstance().level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
-                    .get(ResourceKey.create(Registries.ENCHANTMENT, id)).isPresent();
-            if (!exists) throw new IllegalArgumentException("unknown enchantment");
-        } catch (RuntimeException exception) {
+        Identifier id = enchantmentNameResolver.resolve(idText);
+        if (id == null) {
             setError(Component.translatable("gui.easyautocycler.filter.error.invalid_enchantment_id", idText));
             return;
         }
