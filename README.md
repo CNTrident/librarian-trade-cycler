@@ -5,13 +5,13 @@
 [![Minecraft](https://img.shields.io/badge/Minecraft-26.1.2-62B47A)](https://www.minecraft.net/)
 [![Fabric](https://img.shields.io/badge/Loader-Fabric-DBD0B4)](https://fabricmc.net/)
 
-面向 Minecraft Java Edition 26.1.2 + Fabric 的客户端便捷模组。它与
+面向 Minecraft Java Edition 26.1.2 Fabric 的客户端便捷模组。它与
 [Trade Cycling 1.0.21+26.1.2](https://www.curseforge.com/minecraft/mc-mods/trade-cycling/files/8020648)
 配合，在未锁定的村民交易界面中自动刷新交易，直到出现满足条件的附魔书。
 
 ## 功能
 
-- 可保存多个附魔书目标，并以“任一满足（OR）”或“全部满足（AND）”决定停止条件。
+- 可保存多个附魔书目标，并以“任一满足（OR）”或“全部满足（AND）”决定停止条件（未经实测，但可能可以配合visible tranders模组实现刷出同时满足多个条件的图书管理员）。
 - 每个目标可设置附魔 ID、精确等级、最低和最高原始绿宝石价格。
 - 价格使用 `MerchantOffer#getBaseCostA()`，不计入治愈/声望/村庄英雄折扣，也不计入需求涨价。
 - 每次刷新都等待服务端返回新交易后再继续，不会每 tick 连续发送刷新包。
