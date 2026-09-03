@@ -5,13 +5,16 @@
 [![Minecraft](https://img.shields.io/badge/Minecraft-26.2-62B47A)](https://www.minecraft.net/)
 [![Fabric](https://img.shields.io/badge/Loader-Fabric-DBD0B4)](https://fabricmc.net/)
 
-面向 Minecraft Java Edition 26.2 + Fabric 的客户端便捷模组。它与
-[Trade Cycling 1.0.21+26.2](https://www.curseforge.com/minecraft/mc-mods/trade-cycling/files/8271477)
+面向 Minecraft Java Edition 26.1.2 / 26.2 + Fabric 的客户端便捷模组。它与对应版本的
+[Trade Cycling](https://www.curseforge.com/minecraft/mc-mods/trade-cycling)
 配合，在未锁定的职业村民交易界面中自动刷新交易，直到出现满足条件的附魔书或物品。
 
 ## 下载
 
-从 [GitHub Releases](https://github.com/CNTrident/villager-trade-finder/releases/latest) 下载与 Minecraft 26.2 对应的 JAR。
+从 [GitHub Releases](https://github.com/CNTrident/villager-trade-finder/releases/latest) 下载与 Minecraft 版本完全对应的 JAR：
+
+- Minecraft 26.2：`villager_trade_finder-fabric-26.2-1.7.0.jar`
+- Minecraft 26.1.2：`villager_trade_finder-fabric-26.1.2-1.7.0.jar`
 
 ## 功能
 
@@ -39,14 +42,14 @@
 
 客户端 `mods` 目录放入：
 
-1. `villager_trade_finder-fabric-26.2-1.7.0.jar`
-2. `trade-cycling-fabric-1.0.21+26.2.jar`
-3. 与 Minecraft 26.2 匹配的 Fabric API
+1. 与游戏版本对应的 Villager Trade Finder JAR
+2. 对应版本的 Trade Cycling 1.0.21（26.2 或 26.1.2）
+3. 与游戏版本匹配的 Fabric API
 
 如需匹配“后续交易”或“全部交易”，客户端和服务器还需要安装 VisibleTraders 2.4.0 或更高版本。
 
 多人游戏中，服务器也必须安装 Trade Cycling；本模组自身只需安装在客户端。
-Minecraft 26.2 和本项目的构建环境要求 Java 25。
+Minecraft 26.1.2、26.2 和本项目的构建环境均要求 Java 25。不要在 26.1.2 与 26.2 之间混用 JAR。
 
 ### 使用注意事项
 
@@ -75,7 +78,11 @@ Minecraft 26.2 和本项目的构建环境要求 Java 25。
 使用 Java 25：
 
 ```powershell
+# 默认构建 Minecraft 26.2
 .\gradlew.bat build
+
+# 构建 Minecraft 26.1.2
+.\gradlew.bat clean build -Pminecraft_version=26.1.2 -Pfabric_api_version=0.146.0+26.1.2 -Ptrade_cycling_file_id=8020648
 ```
 
 产物位于 `build/libs/`。

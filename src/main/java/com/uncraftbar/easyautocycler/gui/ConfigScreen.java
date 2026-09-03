@@ -2,6 +2,7 @@ package com.uncraftbar.easyautocycler.gui;
 
 import com.uncraftbar.easyautocycler.AutomationManager;
 import com.uncraftbar.easyautocycler.EasyAutoCyclerMod;
+import com.uncraftbar.easyautocycler.compat.MinecraftScreenCompat;
 import com.uncraftbar.easyautocycler.filter.FilterEntry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -239,7 +240,7 @@ public class ConfigScreen extends Screen {
     @Override
     public void onClose() {
         if (this.minecraft != null) {
-            this.minecraft.gui.setScreen(this.previousScreen);
+            MinecraftScreenCompat.setScreen(this.minecraft, this.previousScreen);
         }
     }
 
@@ -286,7 +287,7 @@ public class ConfigScreen extends Screen {
                 filters.add(newFilter);
                 refreshFiltersList();
             });
-            Minecraft.getInstance().gui.setScreen(editorScreen);
+            MinecraftScreenCompat.setScreen(Minecraft.getInstance(), editorScreen);
         } else {
             int filterIndex = filters.indexOf(filterToEdit);
             if (filterIndex >= 0) {
@@ -297,7 +298,7 @@ public class ConfigScreen extends Screen {
                     filters.set(filterIndex, filterCopy);
                     refreshFiltersList();
                 });
-                Minecraft.getInstance().gui.setScreen(editorScreen);
+                MinecraftScreenCompat.setScreen(Minecraft.getInstance(), editorScreen);
             }
         }
     }

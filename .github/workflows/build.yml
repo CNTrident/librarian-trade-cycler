@@ -13,6 +13,15 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - minecraft: "26.2"
+            fabric_api: "0.158.0+26.2"
+            trade_cycling_file: "8271477"
+          - minecraft: "26.1.2"
+            fabric_api: "0.146.0+26.1.2"
+            trade_cycling_file: "8020648"
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -27,11 +36,15 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build
-        run: ./gradlew build --stacktrace
+        run: >-
+          ./gradlew clean build --stacktrace
+          -Pminecraft_version=${{ matrix.minecraft }}
+          -Pfabric_api_version=${{ matrix.fabric_api }}
+          -Ptrade_cycling_file_id=${{ matrix.trade_cycling_file }}
 
       - name: Upload mod JAR
         uses: actions/upload-artifact@v4
         with:
-          name: villager-trade-finder-fabric-26.2
+          name: villager-trade-finder-fabric-${{ matrix.minecraft }}
           path: build/libs/*.jar
           if-no-files-found: error

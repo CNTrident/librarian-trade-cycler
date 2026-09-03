@@ -1,6 +1,7 @@
 package com.uncraftbar.easyautocycler;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.uncraftbar.easyautocycler.compat.MinecraftScreenCompat;
 import com.uncraftbar.easyautocycler.gui.ConfigScreen;
 import com.uncraftbar.easyautocycler.gui.CustomImageButton;
 import com.uncraftbar.easyautocycler.config.ClientConfig;
@@ -69,7 +70,7 @@ public class ClientEventHandler {
                 configButtonX, configButtonY, buttonWidth, buttonHeight,
                 CONFIG_BUTTON_NORMAL_RL, CONFIG_BUTTON_HOVER_RL,
                 Component.translatable("gui.easyautocycler.button.config.tooltip"),
-                (button) -> Minecraft.getInstance().gui.setScreen(
+                (button) -> MinecraftScreenCompat.setScreen(Minecraft.getInstance(),
                         new ConfigScreen(merchantScreen, ConfigScreen.titleFor(merchantScreen))));
 
         CustomImageButton toggleButton = new CycleAwareImageButton(

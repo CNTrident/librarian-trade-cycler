@@ -6,6 +6,14 @@ plugins {
 version = mod_version
 group = mod_group_id
 
+def minecraftCompatibility = minecraft_version == '26.1.2' ? '26_1_2' : '26_2'
+
+sourceSets {
+    main {
+        java.srcDir "src/compat/${minecraftCompatibility}/java"
+    }
+}
+
 base {
     archivesName = "villager_trade_finder-${mod_loader}-${minecraft_version}"
 }
@@ -45,9 +53,10 @@ dependencies {
 
 processResources {
     inputs.property 'version', mod_version
+    inputs.property 'minecraft_version', minecraft_version
 
     filesMatching('fabric.mod.json') {
-        expand 'version': mod_version
+        expand 'version': mod_version, 'minecraft_version': minecraft_version
     }
 }
 

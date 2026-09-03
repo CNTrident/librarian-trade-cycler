@@ -1,6 +1,7 @@
 package com.uncraftbar.easyautocycler;
 
 import com.uncraftbar.easyautocycler.config.FilterConfig;
+import com.uncraftbar.easyautocycler.compat.MinecraftScreenCompat;
 import com.uncraftbar.easyautocycler.compat.VisibleTradersCompat;
 import com.uncraftbar.easyautocycler.filter.FilterEntry;
 import net.fabricmc.loader.api.FabricLoader;
@@ -300,7 +301,7 @@ public class AutomationManager {
     }
 
     private void start() {
-        Screen currentScreen = Minecraft.getInstance().gui.screen();
+        Screen currentScreen = MinecraftScreenCompat.getScreen(Minecraft.getInstance());
 
         if (!(currentScreen instanceof MerchantScreen)) {
             this.sendMessageToPlayer(Component.translatable("chat.easyautocycler.error.noscreen")
@@ -379,7 +380,7 @@ public class AutomationManager {
     public void clientTick() {
         if (!isRunning.get()) return;
 
-        if (!(Minecraft.getInstance().gui.screen() instanceof MerchantScreen screen)) {
+        if (!(MinecraftScreenCompat.getScreen(Minecraft.getInstance()) instanceof MerchantScreen screen)) {
             stop("Screen closed");
             return;
         }
@@ -412,7 +413,7 @@ public class AutomationManager {
     public void onMerchantOffersUpdated(int containerId) {
         if (!isRunning.get() || !waitingForOfferUpdate) return;
 
-        if (!(Minecraft.getInstance().gui.screen() instanceof MerchantScreen screen)) {
+        if (!(MinecraftScreenCompat.getScreen(Minecraft.getInstance()) instanceof MerchantScreen screen)) {
             stop("Screen closed");
             return;
         }

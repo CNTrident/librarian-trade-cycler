@@ -1,5 +1,6 @@
 package com.uncraftbar.easyautocycler.gui;
 
+import com.uncraftbar.easyautocycler.compat.MinecraftScreenCompat;
 import com.uncraftbar.easyautocycler.filter.FilterEntry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -463,6 +464,6 @@ public class FilterEditorScreen extends Screen {
         return handled;
     }
 
-    @Override public void onClose() { Minecraft.getInstance().gui.setScreen(previousScreen); }
+    @Override public void onClose() { MinecraftScreenCompat.setScreen(Minecraft.getInstance(), previousScreen); }
     @Override public boolean isPauseScreen() { return false; }
 }
