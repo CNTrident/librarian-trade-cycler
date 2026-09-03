@@ -3,17 +3,20 @@ package com.uncraftbar.easyautocycler;
 import com.uncraftbar.easyautocycler.gui.ConfigScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.MerchantScreen;
-import net.minecraft.network.chat.Component;
 
 public class InputHandler {
 
     public static void onClientTick(Minecraft client) {
         if (Keybindings.openConfigKey != null && Keybindings.openConfigKey.consumeClick()) {
-            client.setScreen(new ConfigScreen(client.screen, Component.translatable("gui.easyautocycler.config.title")));
+            if (client.gui.screen() instanceof MerchantScreen screen
+                    && AutomationManager.INSTANCE.isSupportedVillagerTradeScreen(screen)) {
+                client.gui.setScreen(new ConfigScreen(screen, ConfigScreen.titleFor(screen)));
+            }
         }
 
         if (Keybindings.toggleAutoTradeKey != null && Keybindings.toggleAutoTradeKey.consumeClick()) {
-            if (client.screen instanceof MerchantScreen) {
+            if (client.gui.screen() instanceof MerchantScreen screen
+                    && AutomationManager.INSTANCE.isSupportedVillagerTradeScreen(screen)) {
                 AutomationManager.INSTANCE.toggle();
             }
         }

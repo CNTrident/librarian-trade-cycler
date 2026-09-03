@@ -5,12 +5,30 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Represents a single filter entry in the automated trade cycling system.
  * Each entry contains the criteria for a trade that should be detected.
  */
 public class FilterEntry {
-    private boolean enabled = true;
+    public record EnchantmentTarget(Identifier id, int level) {}
+
+    public enum Mode {
+        ON,
+        OFF,
+        AUTO
+    }
+
+    public enum TradeScope {
+        INITIAL,
+        LATER,
+        ALL
+    }
+
+    private Mode mode = Mode.ON;
+    private TradeScope tradeScope = TradeScope.INITIAL;
     
     // Item-related criteria
     private Identifier itemId;
@@ -19,6 +37,7 @@ public class FilterEntry {
     // Enchantment-related criteria
     private Identifier enchantmentId;
     private int enchantmentLevel = 1;
+    private List<EnchantmentTarget> itemEnchantments = new ArrayList<>();
     
     // Payment criteria
     private Identifier paymentItemId; // null = emeralds (default)
@@ -33,11 +52,13 @@ public class FilterEntry {
      * Copy constructor to create a clone of an existing filter
      */
     public FilterEntry(FilterEntry other) {
-        this.enabled = other.enabled;
+        this.mode = other.mode;
+        this.tradeScope = other.tradeScope;
         this.itemId = other.itemId;
         this.minCount = other.minCount;
         this.enchantmentId = other.enchantmentId;
         this.enchantmentLevel = other.enchantmentLevel;
+        this.itemEnchantments = new ArrayList<>(other.itemEnchantments);
         this.paymentItemId = other.paymentItemId;
         this.minPrice = other.minPrice;
         this.maxPrice = other.maxPrice;
@@ -45,11 +66,31 @@ public class FilterEntry {
 
     // Getters and setters
     public boolean isEnabled() {
-        return enabled;
+        return mode != Mode.OFF;
     }
 
     public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
+        this.mode = enabled ? Mode.ON : Mode.OFF;
+    }
+
+    public Mode getMode() {
+        return mode;
+    }
+
+    public void setMode(Mode mode) {
+        this.mode = mode == null ? Mode.ON : mode;
+    }
+
+    public boolean isAutoDisable() {
+        return mode == Mode.AUTO;
+    }
+
+    public TradeScope getTradeScope() {
+        return tradeScope;
+    }
+
+    public void setTradeScope(TradeScope tradeScope) {
+        this.tradeScope = tradeScope == null ? TradeScope.INITIAL : tradeScope;
     }
 
     public Identifier getItemId() {
@@ -82,6 +123,15 @@ public class FilterEntry {
 
     public void setEnchantmentLevel(int enchantmentLevel) {
         this.enchantmentLevel = enchantmentLevel;
+    }
+
+    public List<EnchantmentTarget> getItemEnchantments() {
+        return List.copyOf(itemEnchantments);
+    }
+
+    public void setItemEnchantments(List<EnchantmentTarget> itemEnchantments) {
+        this.itemEnchantments = itemEnchantments == null
+                ? new ArrayList<>() : new ArrayList<>(itemEnchantments);
     }
 
     public Identifier getPaymentItemId() {
@@ -119,28 +169,53 @@ public class FilterEntry {
      * Creates a human-readable display name for this filter
      */
     public Component getDisplayName() {
+        return getDisplayName(null, null, List.of());
+    }
+
+    public Component getDisplayName(String enchantmentDisplayName) {
+        return getDisplayName(enchantmentDisplayName, null, List.of());
+    }
+
+    public Component getDisplayName(String enchantmentDisplayName, String itemDisplayName) {
+        return getDisplayName(enchantmentDisplayName, itemDisplayName, List.of());
+    }
+
+    public Component getDisplayName(String enchantmentDisplayName, String itemDisplayName,
+                                    List<String> itemEnchantmentDisplayNames) {
         MutableComponent component = Component.empty();
 
-        if (enchantmentId != null) {
-            component.append(Component.literal(enchantmentId.getPath()).withStyle(ChatFormatting.AQUA));
-            component.append(Component.literal("  Lv. " + enchantmentLevel).withStyle(ChatFormatting.GRAY));
-
-            if (itemId != null) {
+        if (itemId != null) {
+            String itemName = itemDisplayName == null || itemDisplayName.isBlank()
+                    ? itemId.getPath() : itemDisplayName;
+            component.append(Component.literal(itemName).withStyle(ChatFormatting.GOLD));
+            for (int index = 0; index < itemEnchantments.size(); index++) {
+                EnchantmentTarget target = itemEnchantments.get(index);
+                String enchantmentName = index < itemEnchantmentDisplayNames.size()
+                        && !itemEnchantmentDisplayNames.get(index).isBlank()
+                        ? itemEnchantmentDisplayNames.get(index) : target.id().getPath();
                 component.append(Component.literal("  •  ").withStyle(ChatFormatting.DARK_GRAY));
-                component.append(Component.literal(itemId.getPath()).withStyle(ChatFormatting.GOLD));
+                component.append(Component.literal(enchantmentName).withStyle(ChatFormatting.AQUA));
+                component.append(Component.translatable("gui.easyautocycler.filter.display.level",
+                        target.level()).withStyle(ChatFormatting.GRAY));
             }
-        } else if (itemId != null) {
-            component.append(Component.literal(itemId.getPath()).withStyle(ChatFormatting.GOLD));
+        } else if (enchantmentId != null) {
+            String name = enchantmentDisplayName == null || enchantmentDisplayName.isBlank()
+                    ? enchantmentId.getPath() : enchantmentDisplayName;
+            component.append(Component.literal(name).withStyle(ChatFormatting.AQUA));
+            component.append(Component.translatable("gui.easyautocycler.filter.display.level",
+                    enchantmentLevel).withStyle(ChatFormatting.GRAY));
         } else {
-            component.append(Component.literal("Empty filter").withStyle(ChatFormatting.RED));
+            component.append(Component.translatable("gui.easyautocycler.filter.empty")
+                    .withStyle(ChatFormatting.RED));
         }
 
         if (itemId != null && minCount > 1) {
             component.append(Component.literal("  ×" + minCount).withStyle(ChatFormatting.GRAY));
         }
         component.append(Component.literal("  •  " + minPrice + "-" + maxPrice + " ").withStyle(ChatFormatting.DARK_GRAY));
-        component.append(Component.literal(paymentItemId == null ? "emeralds" : paymentItemId.getPath())
-                .withStyle(ChatFormatting.GREEN));
+        component.append((paymentItemId == null
+                ? Component.translatable("gui.easyautocycler.filter.payment.emeralds")
+                : Component.literal(paymentItemId.getPath())).withStyle(ChatFormatting.GREEN));
 
         return component;
     }

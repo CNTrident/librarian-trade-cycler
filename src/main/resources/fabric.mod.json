@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "librarian_trade_cycler",
   "version": "${version}",
-  "name": "Librarian Trade Cycler",
-  "description": "Automatically cycles unlocked librarian trades until an exact enchanted-book and original-price target is found.",
+  "name": "Villager Trade Finder",
+  "description": "Automatically cycles profession-villager trades until a configured enchanted-book or item target is found.",
   "authors": [
     "CNTrident"
   ],
@@ -11,9 +11,9 @@
     "Uncraftbar (Easy Auto Cycler base)"
   ],
   "contact": {
-    "homepage": "https://github.com/CNTrident/librarian-trade-cycler",
-    "sources": "https://github.com/CNTrident/librarian-trade-cycler",
-    "issues": "https://github.com/CNTrident/librarian-trade-cycler/issues"
+    "homepage": "https://github.com/CNTrident/villager-trade-finder",
+    "sources": "https://github.com/CNTrident/villager-trade-finder",
+    "issues": "https://github.com/CNTrident/villager-trade-finder/issues"
   },
   "license": "MIT",
   "environment": "client",
@@ -27,7 +27,7 @@
   ],
   "depends": {
     "fabricloader": ">=0.18.6",
-    "minecraft": "~26.1",
+    "minecraft": "26.2",
     "java": ">=25",
     "fabric-api-base": "*",
     "fabric-key-mapping-api-v1": "*",
@@ -35,6 +35,9 @@
     "fabric-resource-loader-v0": "*",
     "fabric-screen-api-v1": "*",
     "trade_cycling": ">=1.0.21"
+  },
+  "suggests": {
+    "visibletraders": ">=2.4.0"
   },
   "breaks": {
     "easyautocycler": "*"

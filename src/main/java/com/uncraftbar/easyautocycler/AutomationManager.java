@@ -1,6 +1,7 @@
 package com.uncraftbar.easyautocycler;
 
 import com.uncraftbar.easyautocycler.config.FilterConfig;
+import com.uncraftbar.easyautocycler.compat.VisibleTradersCompat;
 import com.uncraftbar.easyautocycler.filter.FilterEntry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
@@ -12,6 +13,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -29,7 +31,9 @@ import org.jspecify.annotations.Nullable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -43,6 +47,7 @@ public class AutomationManager {
 
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private boolean waitingForOfferUpdate = false;
+    private boolean waitingForVisibleTradersOffers = false;
     private boolean offerUpdateReadyForEvaluation = false;
     private int waitingForOfferTicks = 0;
     private int currentCycles = 0;
@@ -93,6 +98,7 @@ public class AutomationManager {
         initialized = true;
 
         tradeCyclingLoaded = FabricLoader.getInstance().isModLoaded("trade_cycling");
+        VisibleTradersCompat.initialize();
 
         EasyAutoCyclerMod.LOGGER.info("Trade Cycling mod is {}", tradeCyclingLoaded ? "loaded" : "not loaded");
 
@@ -122,12 +128,39 @@ public class AutomationManager {
     private int targetItemCount = 1;
 
     private List<FilterEntry> filterEntries = new ArrayList<>();
+    private List<FilterEntry> otherVillagerFilterEntries = new ArrayList<>();
+    private final Map<String, List<FilterEntry>> professionFilterEntries = new HashMap<>();
     private boolean matchAny = true;
+    private boolean otherVillagerMatchAny = true;
+    private final Map<String, Boolean> professionMatchAny = new HashMap<>();
+    private String runningProfessionKey = "minecraft:librarian";
     private FilterEntry lastMatchedFilter = null;
+    private final List<FilterEntry> lastMatchedFilters = new ArrayList<>();
 
     private AutomationManager() {}
 
     public boolean isRunning() { return isRunning.get(); }
+
+    public boolean isLibrarianTradeScreen(Screen screen) {
+        Identifier professionId = getVillagerProfessionId(screen);
+        return professionId != null && "librarian".equals(professionId.getPath());
+    }
+
+    public boolean isSupportedVillagerTradeScreen(Screen screen) {
+        Identifier professionId = getVillagerProfessionId(screen);
+        return professionId != null && !"none".equals(professionId.getPath())
+                && !"nitwit".equals(professionId.getPath());
+    }
+
+    @Nullable
+    public Identifier getVillagerProfessionId(Screen screen) {
+        if (!(screen instanceof MerchantScreen merchantScreen)
+                || !(merchantScreen.getTitle().getContents() instanceof TranslatableContents title)) return null;
+        String key = title.getKey();
+        String[] parts = key.split("\\.");
+        if (parts.length < 4 || !"entity".equals(parts[0]) || !"villager".equals(parts[2])) return null;
+        return Identifier.tryParse(parts[1] + ":" + parts[3]);
+    }
     @Nullable public Identifier getTargetEnchantmentId() { return targetEnchantmentId; }
     @Nullable public Identifier getTargetItemId() { return targetItemId; }
     public int getMaxEmeraldCost() { return maxEmeraldCost; }
@@ -167,14 +200,32 @@ public class AutomationManager {
 
     public List<FilterEntry> getFilterEntries() {
         migrateOldConfigToFilters();
-        return new ArrayList<>(filterEntries);
+        return filterEntries.stream().map(FilterEntry::new).collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    public List<FilterEntry> getFilterEntries(Identifier professionId) {
+        if (isLibrarianProfession(professionId)) return getFilterEntries();
+        List<FilterEntry> entries = ensureProfessionProfile(professionId);
+        return entries.stream().map(FilterEntry::new)
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public void setFilterEntries(List<FilterEntry> entries) {
+        setFilterEntries(Identifier.withDefaultNamespace("librarian"), entries);
+    }
+
+    public void setFilterEntries(Identifier professionId, List<FilterEntry> entries) {
+        List<FilterEntry> copied = entries == null ? new ArrayList<>() : entries.stream()
+                .map(FilterEntry::new).collect(Collectors.toCollection(ArrayList::new));
+        if (!isLibrarianProfession(professionId)) {
+            this.professionFilterEntries.put(professionId.toString(), copied);
+            saveFiltersToConfig();
+            return;
+        }
         if (entries == null) {
             this.filterEntries = new ArrayList<>();
         } else {
-            this.filterEntries = new ArrayList<>(entries);
+            this.filterEntries = copied;
         }
         this.targetEnchantmentId = null;
         this.targetItemId = null;
@@ -184,7 +235,28 @@ public class AutomationManager {
 
     public boolean isMatchAny() { return matchAny; }
 
+    public boolean isMatchAny(Identifier professionId) {
+        if (isLibrarianProfession(professionId)) return matchAny;
+        ensureProfessionProfile(professionId);
+        return professionMatchAny.getOrDefault(professionId.toString(), otherVillagerMatchAny);
+    }
+
     public void setMatchAny(boolean matchAny) { this.matchAny = matchAny; }
+
+    public void setMatchAny(Identifier professionId, boolean value) {
+        if (isLibrarianProfession(professionId)) this.matchAny = value;
+        else this.professionMatchAny.put(professionId.toString(), value);
+    }
+
+    private static boolean isLibrarianProfession(@Nullable Identifier professionId) {
+        return professionId != null && "librarian".equals(professionId.getPath());
+    }
+
+    private List<FilterEntry> ensureProfessionProfile(Identifier professionId) {
+        String key = professionId.toString();
+        return professionFilterEntries.computeIfAbsent(key, ignored -> otherVillagerFilterEntries.stream()
+                .map(FilterEntry::new).collect(Collectors.toCollection(ArrayList::new)));
+    }
 
     @Nullable
     public FilterEntry getLastMatchedFilter() { return lastMatchedFilter; }
@@ -213,7 +285,7 @@ public class AutomationManager {
         this.targetItemId = null;
         this.filterEntries.clear();
         this.lastMatchedFilter = null;
-        this.sendMessageToPlayer(Component.literal("Cleared target trade. Automation will not stop automatically."));
+        this.sendMessageToPlayer(Component.translatable("chat.easyautocycler.target_cleared"));
     }
 
     public void toggle() {
@@ -228,21 +300,43 @@ public class AutomationManager {
     }
 
     private void start() {
-        Screen currentScreen = Minecraft.getInstance().screen;
+        Screen currentScreen = Minecraft.getInstance().gui.screen();
 
         if (!(currentScreen instanceof MerchantScreen)) {
-            this.sendMessageToPlayer(Component.literal("Error: Villager trade screen not open."));
+            this.sendMessageToPlayer(Component.translatable("chat.easyautocycler.error.noscreen")
+                    .withStyle(ChatFormatting.RED));
+            return;
+        }
+
+        if (!isSupportedVillagerTradeScreen(currentScreen)) {
+            this.sendMessageToPlayer(Component.translatable(
+                    "chat.easyautocycler.error.unsupported_merchant").withStyle(ChatFormatting.RED));
             return;
         }
 
         if (!initialized || !tradeCyclingLoaded) {
-            this.sendMessageToPlayer(Component.literal("Error: Trade Cycling mod not detected.").withStyle(ChatFormatting.RED));
+            this.sendMessageToPlayer(Component.translatable("chat.easyautocycler.error.trade_cycling_missing")
+                    .withStyle(ChatFormatting.RED));
             return;
         }
 
-        migrateOldConfigToFilters();
-        if (filterEntries.isEmpty()) {
+        Identifier currentProfession = getVillagerProfessionId(currentScreen);
+        if (currentProfession == null) return;
+        runningProfessionKey = currentProfession.toString();
+        if (isLibrarianProfession(currentProfession)) migrateOldConfigToFilters();
+        else ensureProfessionProfile(currentProfession);
+        if (activeFilterEntries().isEmpty()) {
             this.sendMessageToPlayer(Component.translatable("chat.easyautocycler.error.noconfig").withStyle(ChatFormatting.RED));
+            return;
+        }
+        if (activeFilterEntries().stream().noneMatch(FilterEntry::isEnabled)) {
+            this.sendMessageToPlayer(Component.translatable(
+                    "chat.easyautocycler.error.no_enabled_targets").withStyle(ChatFormatting.RED));
+            return;
+        }
+        if (requiresFutureOffers() && !VisibleTradersCompat.isAvailable()) {
+            this.sendMessageToPlayer(Component.translatable(
+                    "chat.easyautocycler.error.visibletraders_required").withStyle(ChatFormatting.RED));
             return;
         }
 
@@ -254,12 +348,14 @@ public class AutomationManager {
 
         if (isRunning.compareAndSet(false, true)) {
             EasyAutoCyclerMod.LOGGER.debug("Starting network-synchronized villager trade cycling.");
-            this.sendMessageToPlayer(Component.literal("Auto-cycling started. Press button again to stop."));
+            this.sendMessageToPlayer(Component.translatable("chat.easyautocycler.started"));
             this.waitingForOfferUpdate = false;
+            this.waitingForVisibleTradersOffers = false;
             this.offerUpdateReadyForEvaluation = false;
             this.waitingForOfferTicks = 0;
             this.currentCycles = 0;
             this.lastMatchedFilter = null;
+            this.lastMatchedFilters.clear();
             evaluateAndMaybeCycle(merchantScreen);
         }
     }
@@ -271,6 +367,7 @@ public class AutomationManager {
     private boolean stopInternal(String reason) {
         if (isRunning.compareAndSet(true, false)) {
             waitingForOfferUpdate = false;
+            waitingForVisibleTradersOffers = false;
             offerUpdateReadyForEvaluation = false;
             waitingForOfferTicks = 0;
             EasyAutoCyclerMod.LOGGER.debug("Stopping villager trade cycling. Reason: {}", reason);
@@ -282,15 +379,25 @@ public class AutomationManager {
     public void clientTick() {
         if (!isRunning.get()) return;
 
-        if (!(Minecraft.getInstance().screen instanceof MerchantScreen screen)) {
+        if (!(Minecraft.getInstance().gui.screen() instanceof MerchantScreen screen)) {
             stop("Screen closed");
             return;
         }
 
         if (waitingForOfferUpdate) {
+            if (waitingForVisibleTradersOffers) {
+                VisibleTradersCompat.OfferSets offerSets =
+                        VisibleTradersCompat.captureOffers(screen.getMenu());
+                if (offerSets.lockedOffersReady()) {
+                    finishOfferUpdateWait();
+                    return;
+                }
+            }
             waitingForOfferTicks++;
             if (waitingForOfferTicks >= OFFER_UPDATE_TIMEOUT_TICKS) {
-                this.sendMessageToPlayer(Component.literal("§cTimed out waiting for updated villager trades."));
+                this.sendMessageToPlayer(Component.translatable(waitingForVisibleTradersOffers
+                        ? "chat.easyautocycler.error.visibletraders_timeout"
+                        : "chat.easyautocycler.error.offer_timeout"));
                 EasyAutoCyclerMod.LOGGER.warn("No merchant-offers acknowledgement received after {} ticks", OFFER_UPDATE_TIMEOUT_TICKS);
                 stop("Merchant offers update timed out");
             }
@@ -305,32 +412,51 @@ public class AutomationManager {
     public void onMerchantOffersUpdated(int containerId) {
         if (!isRunning.get() || !waitingForOfferUpdate) return;
 
-        if (!(Minecraft.getInstance().screen instanceof MerchantScreen screen)) {
+        if (!(Minecraft.getInstance().gui.screen() instanceof MerchantScreen screen)) {
             stop("Screen closed");
             return;
         }
         if (screen.getMenu().containerId != containerId) return;
 
-        waitingForOfferUpdate = false;
         waitingForOfferTicks = 0;
         // Do not send the next cycle from inside the packet handler. The next client
         // tick evaluates the offers that this packet has just applied, and only an
         // unsuccessful evaluation is allowed to issue another refresh request.
+        if (requiresFutureOffers() && VisibleTradersCompat.isAvailable()) {
+            waitingForVisibleTradersOffers = true;
+            return;
+        }
+        finishOfferUpdateWait();
+    }
+
+    private void finishOfferUpdateWait() {
+        waitingForOfferUpdate = false;
+        waitingForVisibleTradersOffers = false;
+        waitingForOfferTicks = 0;
         offerUpdateReadyForEvaluation = true;
     }
 
     private void evaluateAndMaybeCycle(MerchantScreen screen) {
         if (!isRunning.get() || waitingForOfferUpdate) return;
 
-        MerchantOffers offers = screen.getMenu().getOffers();
+        VisibleTradersCompat.OfferSets offerSets = VisibleTradersCompat.captureOffers(screen.getMenu());
+        if (requiresFutureOffers() && VisibleTradersCompat.isAvailable()
+                && !offerSets.lockedOffersReady()) {
+            waitingForOfferUpdate = true;
+            waitingForVisibleTradersOffers = true;
+            waitingForOfferTicks = 0;
+            return;
+        }
+        MerchantOffers offers = offerSets.initial();
 
-        List<FilterEntry> enabledFilters = filterEntries.stream()
+        List<FilterEntry> enabledFilters = activeFilterEntries().stream()
                 .filter(FilterEntry::isEnabled)
                 .collect(Collectors.toList());
 
-        if (!enabledFilters.isEmpty() && checkTradesWithFilters(offers)) {
+        if (!enabledFilters.isEmpty() && checkTradesWithFilters(offerSets)) {
+            int autoDisabledCount = disableMatchedAutoFilters();
             Component message;
-            if (matchAny) {
+            if (activeMatchAny()) {
                 message = Component.translatable(
                         "chat.easyautocycler.found_with_count",
                         currentCycles,
@@ -342,6 +468,10 @@ public class AutomationManager {
                         enabledFilters.size());
             }
             this.sendMessageToPlayer(message);
+            if (autoDisabledCount > 0) {
+                this.sendMessageToPlayer(Component.translatable(
+                        "chat.easyautocycler.auto_disabled", autoDisabledCount));
+            }
             playSuccessSound();
             stop("Target trade found with filter");
             return;
@@ -378,10 +508,13 @@ public class AutomationManager {
             }
 
             waitingForOfferUpdate = true;
+            waitingForVisibleTradersOffers = false;
             waitingForOfferTicks = 0;
             currentCycles++;
             if (!sendCyclePacket()) {
                 waitingForOfferUpdate = false;
+                this.sendMessageToPlayer(Component.translatable("chat.easyautocycler.error.network")
+                        .withStyle(ChatFormatting.RED));
                 stop("Network error");
             }
         }
@@ -461,34 +594,54 @@ public class AutomationManager {
         }
     }
 
-    private boolean checkTradesWithFilters(MerchantOffers offers) {
-        if (filterEntries.isEmpty()) return false;
+    private boolean checkTradesWithFilters(VisibleTradersCompat.OfferSets offerSets) {
+        if (activeFilterEntries().isEmpty()) return false;
 
-        List<FilterEntry> enabledFilters = filterEntries.stream()
+        List<FilterEntry> enabledFilters = activeFilterEntries().stream()
                 .filter(FilterEntry::isEnabled)
                 .collect(Collectors.toList());
 
         if (enabledFilters.isEmpty()) return false;
 
         this.lastMatchedFilter = null;
+        this.lastMatchedFilters.clear();
 
-        if (matchAny) {
-            for (FilterEntry filter : enabledFilters) {
-                if (checkTradeWithFilter(offers, filter)) {
-                    this.lastMatchedFilter = filter;
-                    return true;
-                }
+        for (FilterEntry filter : enabledFilters) {
+            if (checkTradeWithFilter(offerSets.forScope(filter.getTradeScope()), filter)) {
+                this.lastMatchedFilters.add(filter);
             }
-            return false;
-        } else {
-            for (FilterEntry filter : enabledFilters) {
-                if (!checkTradeWithFilter(offers, filter)) {
-                    return false;
-                }
-            }
-            this.lastMatchedFilter = enabledFilters.get(0);
-            return true;
         }
+
+        if (lastMatchedFilters.isEmpty()) return false;
+        this.lastMatchedFilter = lastMatchedFilters.get(0);
+        return activeMatchAny() || lastMatchedFilters.size() == enabledFilters.size();
+    }
+
+    private boolean requiresFutureOffers() {
+        return activeFilterEntries().stream().anyMatch(filter -> filter.isEnabled()
+                && filter.getTradeScope() != FilterEntry.TradeScope.INITIAL);
+    }
+
+    private List<FilterEntry> activeFilterEntries() {
+        if ("minecraft:librarian".equals(runningProfessionKey)) return filterEntries;
+        return professionFilterEntries.getOrDefault(runningProfessionKey, List.of());
+    }
+
+    private boolean activeMatchAny() {
+        return "minecraft:librarian".equals(runningProfessionKey)
+                ? matchAny : professionMatchAny.getOrDefault(runningProfessionKey, otherVillagerMatchAny);
+    }
+
+    private int disableMatchedAutoFilters() {
+        int disabledCount = 0;
+        for (FilterEntry filter : lastMatchedFilters) {
+            if (filter.isAutoDisable()) {
+                filter.setMode(FilterEntry.Mode.OFF);
+                disabledCount++;
+            }
+        }
+        if (disabledCount > 0) saveFiltersToConfig();
+        return disabledCount;
     }
 
     private boolean checkTradeWithFilter(MerchantOffers offers, FilterEntry filter) {
@@ -501,34 +654,25 @@ public class AutomationManager {
             ItemStack costA = offer.getBaseCostA();
             ItemStack costB = offer.getCostB();
 
-            boolean priceMatches;
-            if (filter.getPaymentItemId() == null) {
-                priceMatches = (costA.is(Items.EMERALD)
-                        && costA.getCount() >= filter.getMinPrice()
-                        && costA.getCount() <= filter.getMaxPrice())
-                        || (costB.is(Items.EMERALD)
-                        && costB.getCount() >= filter.getMinPrice()
-                        && costB.getCount() <= filter.getMaxPrice());
-            } else {
-                Item paymentItem = BuiltInRegistries.ITEM.getOptional(filter.getPaymentItemId()).orElse(null);
-                priceMatches = paymentItem != null && (
-                        (costA.is(paymentItem) && costA.getCount() >= filter.getMinPrice()
-                                && costA.getCount() <= filter.getMaxPrice())
-                                || (costB.is(paymentItem) && costB.getCount() >= filter.getMinPrice()
-                                && costB.getCount() <= filter.getMaxPrice()));
-            }
-
-            if (!priceMatches) continue;
-
             if (filter.getItemId() != null) {
-                Identifier itemIdInStack = BuiltInRegistries.ITEM.getKey(resultStack.getItem());
-                if (!itemIdInStack.equals(filter.getItemId())) continue;
-                if (resultStack.getCount() < filter.getMinCount()) continue;
+                boolean targetIsResult = matchesTargetItem(resultStack, filter);
+                boolean targetIsCost = matchesTargetItem(costA, filter) || matchesTargetItem(costB, filter);
+                boolean targetAndPriceMatch = targetIsResult
+                        && (matchesPayment(costA, filter) || matchesPayment(costB, filter));
+                targetAndPriceMatch |= targetIsCost && matchesPayment(resultStack, filter);
+                if (!targetAndPriceMatch) continue;
+            } else if (!matchesPayment(costA, filter) && !matchesPayment(costB, filter)) {
+                continue;
             }
 
-            if (filter.getEnchantmentId() != null) {
-                if (!resultStack.is(Items.ENCHANTED_BOOK)
-                        || !matchesEnchantmentOnStack(resultStack, filter.getEnchantmentId(), filter.getEnchantmentLevel(), true)) {
+            if (!filter.getItemEnchantments().isEmpty()) {
+                if (!matchesTargetItem(resultStack, filter)
+                        || !matchesExactItemEnchantments(resultStack, filter.getItemEnchantments())) {
+                    continue;
+                }
+            } else if (filter.getEnchantmentId() != null) {
+                if (!resultStack.is(Items.ENCHANTED_BOOK) || !matchesEnchantmentOnStack(resultStack,
+                        filter.getEnchantmentId(), filter.getEnchantmentLevel(), true)) {
                     continue;
                 }
             }
@@ -536,6 +680,29 @@ public class AutomationManager {
             return true;
         }
         return false;
+    }
+
+    private boolean matchesTargetItem(ItemStack stack, FilterEntry filter) {
+        if (stack.isEmpty() || filter.getItemId() == null || stack.getCount() < filter.getMinCount()) return false;
+        return BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(filter.getItemId());
+    }
+
+    private boolean matchesPayment(ItemStack stack, FilterEntry filter) {
+        if (stack.isEmpty() || stack.getCount() < filter.getMinPrice()
+                || stack.getCount() > filter.getMaxPrice()) return false;
+        if (filter.getPaymentItemId() == null) return stack.is(Items.EMERALD);
+        Item paymentItem = BuiltInRegistries.ITEM.getOptional(filter.getPaymentItemId()).orElse(null);
+        return paymentItem != null && stack.is(paymentItem);
+    }
+
+    private boolean matchesExactItemEnchantments(ItemStack stack,
+                                                 List<FilterEntry.EnchantmentTarget> targets) {
+        ItemEnchantments enchantments = stack.get(DataComponents.ENCHANTMENTS);
+        if (enchantments == null || enchantments.size() != targets.size()) return false;
+        for (FilterEntry.EnchantmentTarget target : targets) {
+            if (!enchantmentsMatch(enchantments, target.id(), target.level(), true)) return false;
+        }
+        return true;
     }
 
     private boolean matchesEnchantmentOnStack(ItemStack stack, Identifier targetId, int requiredLevel, boolean exactLevel) {
@@ -566,9 +733,18 @@ public class AutomationManager {
         FilterConfig.Config config = FilterConfig.loadFilters();
         this.filterEntries = FilterConfig.dataToFilters(config.filters);
         this.matchAny = config.matchAny;
+        this.otherVillagerFilterEntries = FilterConfig.dataToFilters(config.otherVillagerFilters);
+        this.otherVillagerMatchAny = config.otherVillagerMatchAny;
+        this.professionFilterEntries.clear();
+        config.professionFilters.forEach((profession, entries) ->
+                this.professionFilterEntries.put(profession, FilterConfig.dataToFilters(entries)));
+        this.professionMatchAny.clear();
+        this.professionMatchAny.putAll(config.professionMatchAny);
     }
 
     public void saveFiltersToConfig() {
-        FilterConfig.saveFilters(this.filterEntries, this.matchAny);
+        FilterConfig.saveFilters(this.filterEntries, this.matchAny,
+                this.otherVillagerFilterEntries, this.otherVillagerMatchAny,
+                this.professionFilterEntries, this.professionMatchAny);
     }
 }

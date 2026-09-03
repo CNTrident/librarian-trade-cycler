@@ -4,7 +4,9 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "MinecraftTickMixin",
-    "ClientPacketListenerMixin"
+    "ClientPacketListenerMixin",
+    "MerchantMenuAccessor",
+    "VillagerTradeAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

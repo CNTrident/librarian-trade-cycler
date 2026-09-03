@@ -7,7 +7,7 @@ version = mod_version
 group = mod_group_id
 
 base {
-    archivesName = "${mod_id}-${mod_loader}-${minecraft_version}"
+    archivesName = "villager_trade_finder-${mod_loader}-${minecraft_version}"
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
@@ -37,11 +37,7 @@ dependencies {
         mappings file("mappings/mappings.tiny")
     }
     modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api-base:${fabric_api_base_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-key-mapping-api-v1:${fabric_key_mapping_api_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-screen-api-v1:${fabric_screen_api_version}"
-    runtimeOnly "net.fabricmc.fabric-api:fabric-resource-loader-v0:${fabric_resource_loader_version}"
-    runtimeOnly "net.fabricmc.fabric-api:fabric-networking-api-v1:${fabric_networking_api_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
 
     modCompileOnly "curse.maven:trader-cycling-570431:${trade_cycling_file_id}"
     modRuntimeOnly "curse.maven:trader-cycling-570431:${trade_cycling_file_id}"

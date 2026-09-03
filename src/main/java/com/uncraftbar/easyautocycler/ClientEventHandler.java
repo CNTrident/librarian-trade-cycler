@@ -29,7 +29,8 @@ public class ClientEventHandler {
      * focus, so we hook the screen's key-press event directly.
      */
     public static void onScreenBeforeInit(Minecraft client, Screen screen, int scaledWidth, int scaledHeight) {
-        if (!(screen instanceof MerchantScreen)) return;
+        if (!(screen instanceof MerchantScreen)
+                || !AutomationManager.INSTANCE.isSupportedVillagerTradeScreen(screen)) return;
 
         ScreenKeyboardEvents.beforeKeyPress(screen).register((s, event) -> {
             if (Keybindings.toggleAutoTradeKey == null) return;
@@ -44,6 +45,7 @@ public class ClientEventHandler {
         if (!(screen instanceof MerchantScreen merchantScreen)) {
             return;
         }
+        if (!AutomationManager.INSTANCE.isSupportedVillagerTradeScreen(merchantScreen)) return;
 
         ClientConfig.Config clientConfig = ClientConfig.load();
         ClientConfig.ButtonLocation buttonLocation = clientConfig.parsedButtonLocation();
@@ -67,8 +69,8 @@ public class ClientEventHandler {
                 configButtonX, configButtonY, buttonWidth, buttonHeight,
                 CONFIG_BUTTON_NORMAL_RL, CONFIG_BUTTON_HOVER_RL,
                 Component.translatable("gui.easyautocycler.button.config.tooltip"),
-                (button) -> Minecraft.getInstance().setScreen(
-                        new ConfigScreen(merchantScreen, Component.translatable("gui.easyautocycler.config.title"))));
+                (button) -> Minecraft.getInstance().gui.setScreen(
+                        new ConfigScreen(merchantScreen, ConfigScreen.titleFor(merchantScreen))));
 
         CustomImageButton toggleButton = new CycleAwareImageButton(
                     merchantScreen,

@@ -1,13 +1,13 @@
 # Contributing
 
-感谢你考虑为 Librarian Trade Cycler 做出贡献。
+感谢你考虑为 Villager Trade Finder 做出贡献。
 
 ## 开发环境
 
-- Minecraft Java Edition 26.1.2
+- Minecraft Java Edition 26.2
 - Java 25
 - Fabric Loader / Fabric API
-- Trade Cycling 1.0.21+26.1.2
+- Trade Cycling 1.0.21+26.2
 
 克隆仓库后运行：
 
